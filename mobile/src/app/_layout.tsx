@@ -54,7 +54,11 @@ function RootLayoutNav() {
           <Stack.Screen name="(app)" />
           <Stack.Screen
             name="(app)/paywall"
-            options={{ presentation: "modal", headerShown: false }}
+            options={{ presentation: "modal", headerShown: false, animation: "slide_from_bottom" }}
+          />
+          <Stack.Screen
+            name="(app)/settings"
+            options={{ headerShown: false, animation: "slide_from_right" }}
           />
         </Stack.Protected>
         <Stack.Protected guard={!session?.user}>
