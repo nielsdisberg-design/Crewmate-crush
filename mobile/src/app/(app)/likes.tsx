@@ -335,7 +335,7 @@ export default function LikesScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setIsRevealMode(true);
     } else {
-      router.push("/(app)/paywall");
+      router.push("/paywall");
     }
   };
 
@@ -408,7 +408,7 @@ export default function LikesScreen() {
             </View>
           ) : (
             <Pressable
-              onPress={() => router.push("/(app)/paywall")}
+              onPress={() => router.push("/paywall")}
               testID="likes-upgrade-header-button"
             >
               <View
@@ -736,7 +736,7 @@ export default function LikesScreen() {
                   </View>
                 </View>
                 <Pressable
-                  onPress={() => router.push("/(app)/paywall")}
+                  onPress={() => router.push("/paywall")}
                   testID="likes-upgrade-banner-button"
                 >
                   <LinearGradient

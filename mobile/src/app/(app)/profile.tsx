@@ -303,7 +303,7 @@ function PhotoGrid({
               <Pressable
                 key={i}
                 testID={`photo-slot-locked-${i}`}
-                onPress={() => router.push("/(app)/paywall")}
+                onPress={() => router.push("/paywall")}
                 style={{
                   width: PHOTO_SIZE,
                   height: PHOTO_SIZE,
@@ -403,7 +403,7 @@ function PhotoGrid({
 
       {!isPremium ? (
         <Pressable
-          onPress={() => router.push("/(app)/paywall")}
+          onPress={() => router.push("/paywall")}
           style={{ marginTop: 14, alignItems: "center" }}
         >
           <Text
@@ -488,7 +488,7 @@ export default function ProfileScreen() {
             {/* Settings button — top-right corner */}
             <Pressable
               testID="profile-settings-button"
-              onPress={() => router.push("/(app)/settings")}
+              onPress={() => router.push("/settings")}
               style={{
                 position: "absolute",
                 top: 16,
@@ -858,7 +858,7 @@ export default function ProfileScreen() {
                   </View>
                   <Pressable
                     testID="view-plans-button"
-                    onPress={() => router.push("/(app)/paywall")}
+                    onPress={() => router.push("/paywall")}
                     style={{
                       marginTop: 4,
                       borderRadius: 12,

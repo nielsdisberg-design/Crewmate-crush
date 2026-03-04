@@ -802,7 +802,7 @@ export default function DiscoverScreen() {
     if (!rcEnabled) return;
     if (!isPremium) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      router.push("/(app)/paywall");
+      router.push("/paywall");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -852,7 +852,7 @@ export default function DiscoverScreen() {
         {!isPremium && rcEnabled ? (
           <LikeCounterBar
             swipeStatus={swipeStatus}
-            onGoUnlimited={() => router.push("/(app)/paywall")}
+            onGoUnlimited={() => router.push("/paywall")}
           />
         ) : null}
 
@@ -1164,7 +1164,7 @@ export default function DiscoverScreen() {
         onClose={() => setLimitModalVisible(false)}
         onUpgrade={() => {
           setLimitModalVisible(false);
-          router.push("/(app)/paywall");
+          router.push("/paywall");
         }}
       />
     </View>
