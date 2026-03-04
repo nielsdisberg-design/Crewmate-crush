@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Pressable,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -78,6 +79,10 @@ function ProfileCard({ profile }: { profile: Profile }) {
   const roleObj = ROLES.find((r) => r.id === profile.favoriteRole);
   const styleObj = PLAY_STYLES.find((p) => p.id === profile.playStyle);
 
+  const firstPhoto = profile.photos && profile.photos.length > 0
+    ? profile.photos.sort((a, b) => a.position - b.position)[0]
+    : null;
+
   return (
     <View
       style={{
@@ -87,20 +92,54 @@ function ProfileCard({ profile }: { profile: Profile }) {
         flex: 1,
       }}
     >
-      {/* Color header */}
-      <LinearGradient
-        colors={[colorHex, "#0B0E1A"]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={{
-          height: 200,
-          justifyContent: "center",
-          alignItems: "center",
-          paddingTop: 20,
-        }}
-      >
-        <CrewmateSvg color={colorHex} size={100} />
-      </LinearGradient>
+      {/* Card header — photo if available, otherwise gradient + crewmate */}
+      {firstPhoto ? (
+        <View style={{ height: 240, position: "relative" }}>
+          <Image
+            source={{ uri: firstPhoto.url }}
+            style={{ width: "100%", height: 240 }}
+            resizeMode="cover"
+          />
+          {/* Dark gradient overlay at bottom for readability */}
+          <LinearGradient
+            colors={["transparent", "rgba(11,14,26,0.85)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 100,
+            }}
+          />
+          {/* Crewmate SVG overlaid on photo bottom */}
+          <View
+            style={{
+              position: "absolute",
+              bottom: 8,
+              right: 16,
+              opacity: 0.7,
+            }}
+          >
+            <CrewmateSvg color={colorHex} size={48} />
+          </View>
+        </View>
+      ) : (
+        <LinearGradient
+          colors={[colorHex, "#0B0E1A"]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={{
+            height: 200,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingTop: 20,
+          }}
+        >
+          <CrewmateSvg color={colorHex} size={100} />
+        </LinearGradient>
+      )}
 
       <View style={{ padding: 24 }}>
         <View

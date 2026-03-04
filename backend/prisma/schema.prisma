@@ -63,24 +63,35 @@ model Verification {
 }
 
 model Profile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String         @id @default(cuid())
+  userId          String         @unique
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   displayName     String
-  bio             String   @default("")
+  bio             String         @default("")
   age             Int
   gender          String
   lookingFor      String
-  crewmateColor   String   @default("red")
-  favoriteRole    String   @default("crewmate")
-  favoriteMap     String   @default("the-skeld")
-  playStyle       String   @default("detective")
-  susLevel        Int      @default(5)
-  gamesPlayed     String   @default("100+")
+  crewmateColor   String         @default("red")
+  favoriteRole    String         @default("crewmate")
+  favoriteMap     String         @default("the-skeld")
+  playStyle       String         @default("detective")
+  susLevel        Int            @default(5)
+  gamesPlayed     String         @default("100+")
   photoUrl        String?
-  isComplete      Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  isComplete      Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  photos          ProfilePhoto[]
+}
+
+model ProfilePhoto {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  url       String
+  fileId    String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 model Swipe {

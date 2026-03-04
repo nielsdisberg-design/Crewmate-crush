@@ -16,6 +16,7 @@ export interface Profile {
   isComplete: boolean;
   createdAt: string;
   updatedAt: string;
+  photos?: { id: string; url: string; position: number }[];
   user?: {
     id: string;
     name: string;

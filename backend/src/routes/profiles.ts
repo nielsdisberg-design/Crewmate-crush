@@ -16,6 +16,7 @@ profileRoutes.get("/me", async (c) => {
 
   const profile = await prisma.profile.findUnique({
     where: { userId: user.id },
+    include: { photos: { orderBy: { position: "asc" } } },
   });
 
   return c.json({ data: profile });
@@ -85,10 +86,69 @@ profileRoutes.get("/discover", async (c) => {
     },
     include: {
       user: { select: { id: true, name: true, image: true } },
+      photos: { orderBy: { position: "asc" }, take: 1 },
     },
     take: 20,
     orderBy: { createdAt: "desc" },
   });
 
   return c.json({ data: profiles });
+});
+
+// Get my photos
+profileRoutes.get("/me/photos", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: { message: "Unauthorized" } }, 401);
+  const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
+  if (!profile) return c.json({ data: [] });
+  const photos = await prisma.profilePhoto.findMany({
+    where: { profileId: profile.id },
+    orderBy: { position: "asc" },
+  });
+  return c.json({ data: photos });
+});
+
+// Add a photo
+profileRoutes.post("/me/photos", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: { message: "Unauthorized" } }, 401);
+  const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
+  if (!profile) return c.json({ error: { message: "Profile not found" } }, 404);
+  const body = await c.req.json() as { url: string; fileId: string; position?: number };
+  const photo = await prisma.profilePhoto.create({
+    data: {
+      profileId: profile.id,
+      url: body.url,
+      fileId: body.fileId,
+      position: body.position ?? 0,
+    },
+  });
+  return c.json({ data: photo });
+});
+
+// Delete a photo
+profileRoutes.delete("/me/photos/:photoId", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: { message: "Unauthorized" } }, 401);
+  const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
+  if (!profile) return c.json({ error: { message: "Profile not found" } }, 404);
+  const { photoId } = c.req.param();
+  const photo = await prisma.profilePhoto.findFirst({
+    where: { id: photoId, profileId: profile.id },
+  });
+  if (!photo) return c.json({ error: { message: "Photo not found" } }, 404);
+  await prisma.profilePhoto.delete({ where: { id: photoId } });
+  return c.json({ data: { success: true } });
+});
+
+// Get photos for another user's profile
+profileRoutes.get("/:userId/photos", async (c) => {
+  const { userId } = c.req.param();
+  const profile = await prisma.profile.findUnique({ where: { userId } });
+  if (!profile) return c.json({ data: [] });
+  const photos = await prisma.profilePhoto.findMany({
+    where: { profileId: profile.id },
+    orderBy: { position: "asc" },
+  });
+  return c.json({ data: photos });
 });
