@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronLeft, Lock } from "lucide-react-native";
 import Slider from "@react-native-community/slider";
 import { api } from "@/lib/api/api";
 import { CREWMATE_COLORS, MAPS, PLAY_STYLES, ROLES } from "@/lib/types";
@@ -32,8 +32,6 @@ const LOOKING_FOR_OPTIONS = [
 ];
 
 interface FormState {
-  displayName: string;
-  age: string;
   bio: string;
   gameUsername: string;
   gender: string;
@@ -47,8 +45,6 @@ interface FormState {
 
 function profileToForm(profile: Profile): FormState {
   return {
-    displayName: profile.displayName || "",
-    age: profile.age ? String(profile.age) : "",
     bio: profile.bio || "",
     gameUsername: profile.gameUsername || "",
     gender: profile.gender || "",
@@ -63,8 +59,6 @@ function profileToForm(profile: Profile): FormState {
 
 function formsAreEqual(a: FormState, b: FormState): boolean {
   return (
-    a.displayName === b.displayName &&
-    a.age === b.age &&
     a.bio === b.bio &&
     a.gameUsername === b.gameUsername &&
     a.gender === b.gender &&
@@ -452,8 +446,6 @@ export default function SettingsScreen() {
   const handleSave = () => {
     if (!form || !hasChanges) return;
     saveMutation.mutate({
-      displayName: form.displayName,
-      age: Number(form.age),
       bio: form.bio,
       gameUsername: form.gameUsername || null,
       gender: form.gender,
@@ -566,21 +558,78 @@ export default function SettingsScreen() {
               borderColor: "#1E2340",
             }}
           >
-            <InputField
-              testID="settings-display-name"
-              label="Display Name"
-              value={form.displayName}
-              onChangeText={(t) => setField("displayName", t)}
-              placeholder="Your crewmate name"
-            />
-            <InputField
-              testID="settings-age"
-              label="Age"
-              value={form.age}
-              onChangeText={(t) => setField("age", t)}
-              placeholder="Your age"
-              keyboardType="numeric"
-            />
+            {/* Read-only locked rows */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingVertical: 10,
+                paddingHorizontal: 2,
+                marginBottom: 4,
+                borderBottomWidth: 1,
+                borderBottomColor: "#0F1225",
+              }}
+            >
+              <View>
+                <Text
+                  style={{
+                    fontFamily: "Inter_500Medium",
+                    fontSize: 12,
+                    color: "#8B92A5",
+                    marginBottom: 2,
+                  }}
+                >
+                  Display Name
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "Inter_600SemiBold",
+                    fontSize: 15,
+                    color: "#FFFFFF",
+                  }}
+                >
+                  {profile?.displayName || "—"}
+                </Text>
+              </View>
+              <Lock size={16} color="#3D4460" />
+            </View>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingVertical: 10,
+                paddingHorizontal: 2,
+                marginBottom: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: "#0F1225",
+              }}
+            >
+              <View>
+                <Text
+                  style={{
+                    fontFamily: "Inter_500Medium",
+                    fontSize: 12,
+                    color: "#8B92A5",
+                    marginBottom: 2,
+                  }}
+                >
+                  Age
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "Inter_600SemiBold",
+                    fontSize: 15,
+                    color: "#FFFFFF",
+                  }}
+                >
+                  {profile?.age != null ? String(profile.age) : "—"}
+                </Text>
+              </View>
+              <Lock size={16} color="#3D4460" />
+            </View>
+
             <InputField
               testID="settings-bio"
               label="Bio"

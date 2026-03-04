@@ -5,6 +5,9 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Modal,
+  FlatList,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,9 +19,24 @@ import * as Haptics from "expo-haptics";
 
 const TOTAL_STEPS = 5;
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 interface FormState {
   displayName: string;
-  age: string;
+  dateOfBirth: string;
   gender: string;
   lookingFor: string;
   crewmateColor: string;
@@ -27,6 +45,350 @@ interface FormState {
   playStyle: string;
   bio: string;
   susLevel: number;
+}
+
+type DobField = "day" | "month" | "year";
+
+interface DobPickerModalProps {
+  visible: boolean;
+  field: DobField;
+  selectedValue: string;
+  onSelect: (value: string) => void;
+  onClose: () => void;
+}
+
+function getDaysInMonth(month: number, year: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+function DobPickerModal({
+  visible,
+  field,
+  selectedValue,
+  onSelect,
+  onClose,
+}: DobPickerModalProps) {
+  const currentYear = new Date().getFullYear();
+
+  let items: string[] = [];
+  if (field === "day") {
+    items = Array.from({ length: 31 }, (_, i) =>
+      String(i + 1).padStart(2, "0")
+    );
+  } else if (field === "month") {
+    items = MONTHS.map((m, i) => `${String(i + 1).padStart(2, "0")} - ${m}`);
+  } else {
+    items = Array.from({ length: 63 }, (_, i) =>
+      String(currentYear - 18 - i)
+    );
+  }
+
+  const displayLabel = field.charAt(0).toUpperCase() + field.slice(1);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.7)",
+          justifyContent: "flex-end",
+        }}
+        onPress={onClose}
+      >
+        <Pressable onPress={(e) => e.stopPropagation()}>
+          <View
+            style={{
+              backgroundColor: "#151929",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              borderTopWidth: 1,
+              borderLeftWidth: 1,
+              borderRightWidth: 1,
+              borderColor: "#1E2340",
+              maxHeight: 400,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingHorizontal: 20,
+                paddingVertical: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: "#1E2340",
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: "Orbitron_700Bold",
+                  fontSize: 15,
+                  color: "#FFFFFF",
+                }}
+              >
+                Select {displayLabel}
+              </Text>
+              <Pressable onPress={onClose}>
+                <Text
+                  style={{
+                    fontFamily: "Inter_600SemiBold",
+                    fontSize: 14,
+                    color: "#38FEDC",
+                  }}
+                >
+                  Done
+                </Text>
+              </Pressable>
+            </View>
+            <FlatList
+              data={items}
+              keyExtractor={(item) => item}
+              style={{ maxHeight: 320 }}
+              renderItem={({ item }) => {
+                const rawValue =
+                  field === "month" ? item.split(" - ")[0] : item;
+                const isSelected = selectedValue === rawValue;
+                return (
+                  <Pressable
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      onSelect(rawValue);
+                      onClose();
+                    }}
+                    style={{
+                      paddingHorizontal: 20,
+                      paddingVertical: 14,
+                      backgroundColor: isSelected
+                        ? "rgba(56,254,220,0.08)"
+                        : "transparent",
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#0F1225",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: "Inter_500Medium",
+                        fontSize: 16,
+                        color: isSelected ? "#38FEDC" : "#FFFFFF",
+                      }}
+                    >
+                      {item}
+                    </Text>
+                    {isSelected ? (
+                      <View
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: "#38FEDC",
+                        }}
+                      />
+                    ) : null}
+                  </Pressable>
+                );
+              }}
+            />
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+interface DobSelectorProps {
+  day: string;
+  month: string;
+  year: string;
+  onDayChange: (v: string) => void;
+  onMonthChange: (v: string) => void;
+  onYearChange: (v: string) => void;
+  dobError: string;
+}
+
+function DobSelector({
+  day,
+  month,
+  year,
+  onDayChange,
+  onMonthChange,
+  onYearChange,
+  dobError,
+}: DobSelectorProps) {
+  const [openField, setOpenField] = useState<DobField | null>(null);
+
+  const monthLabel = month
+    ? MONTHS[parseInt(month, 10) - 1]?.slice(0, 3)
+    : null;
+
+  return (
+    <View>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        {/* Day */}
+        <Pressable
+          testID="dob-day-button"
+          onPress={() => {
+            Haptics.selectionAsync();
+            setOpenField("day");
+          }}
+          style={{
+            flex: 1,
+            backgroundColor: "#151929",
+            borderRadius: 14,
+            padding: 16,
+            borderWidth: 1.5,
+            borderColor: day ? "#38FEDC" : "#1E2340",
+            alignItems: "center",
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "Inter_400Regular",
+              fontSize: 11,
+              color: "#8B92A5",
+              marginBottom: 4,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+            }}
+          >
+            Day
+          </Text>
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 18,
+              color: day ? "#FFFFFF" : "#3D4460",
+            }}
+          >
+            {day || "--"}
+          </Text>
+        </Pressable>
+
+        {/* Month */}
+        <Pressable
+          testID="dob-month-button"
+          onPress={() => {
+            Haptics.selectionAsync();
+            setOpenField("month");
+          }}
+          style={{
+            flex: 1.5,
+            backgroundColor: "#151929",
+            borderRadius: 14,
+            padding: 16,
+            borderWidth: 1.5,
+            borderColor: month ? "#38FEDC" : "#1E2340",
+            alignItems: "center",
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "Inter_400Regular",
+              fontSize: 11,
+              color: "#8B92A5",
+              marginBottom: 4,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+            }}
+          >
+            Month
+          </Text>
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 18,
+              color: month ? "#FFFFFF" : "#3D4460",
+            }}
+          >
+            {monthLabel || "---"}
+          </Text>
+        </Pressable>
+
+        {/* Year */}
+        <Pressable
+          testID="dob-year-button"
+          onPress={() => {
+            Haptics.selectionAsync();
+            setOpenField("year");
+          }}
+          style={{
+            flex: 1.3,
+            backgroundColor: "#151929",
+            borderRadius: 14,
+            padding: 16,
+            borderWidth: 1.5,
+            borderColor: year ? "#38FEDC" : "#1E2340",
+            alignItems: "center",
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "Inter_400Regular",
+              fontSize: 11,
+              color: "#8B92A5",
+              marginBottom: 4,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+            }}
+          >
+            Year
+          </Text>
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 18,
+              color: year ? "#FFFFFF" : "#3D4460",
+            }}
+          >
+            {year || "----"}
+          </Text>
+        </Pressable>
+      </View>
+
+      {dobError.length > 0 ? (
+        <Text
+          style={{
+            fontFamily: "Inter_400Regular",
+            fontSize: 13,
+            color: "#C51111",
+            marginTop: 10,
+            paddingHorizontal: 2,
+          }}
+        >
+          {dobError}
+        </Text>
+      ) : null}
+
+      <DobPickerModal
+        visible={openField === "day"}
+        field="day"
+        selectedValue={day}
+        onSelect={onDayChange}
+        onClose={() => setOpenField(null)}
+      />
+      <DobPickerModal
+        visible={openField === "month"}
+        field="month"
+        selectedValue={month}
+        onSelect={onMonthChange}
+        onClose={() => setOpenField(null)}
+      />
+      <DobPickerModal
+        visible={openField === "year"}
+        field="year"
+        selectedValue={year}
+        onSelect={onYearChange}
+        onClose={() => setOpenField(null)}
+      />
+    </View>
+  );
 }
 
 function OptionButton({
@@ -71,12 +433,36 @@ function OptionButton({
   );
 }
 
+function validateAge(day: string, month: string, year: string): string {
+  if (!day || !month || !year) return "";
+  const dob = new Date(
+    parseInt(year, 10),
+    parseInt(month, 10) - 1,
+    parseInt(day, 10)
+  );
+  const today = new Date();
+  const minDate = new Date(
+    today.getFullYear() - 18,
+    today.getMonth(),
+    today.getDate()
+  );
+  if (dob > minDate) {
+    return "You must be at least 18 years old";
+  }
+  return "";
+}
+
+function buildIsoDate(day: string, month: string, year: string): string {
+  if (!day || !month || !year) return "";
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
 export default function Onboarding() {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>({
     displayName: "",
-    age: "",
+    dateOfBirth: "",
     gender: "",
     lookingFor: "",
     crewmateColor: "red",
@@ -86,6 +472,42 @@ export default function Onboarding() {
     bio: "",
     susLevel: 5,
   });
+
+  // Separate DOB parts for the picker UI
+  const [dobDay, setDobDay] = useState("");
+  const [dobMonth, setDobMonth] = useState("");
+  const [dobYear, setDobYear] = useState("");
+  const [dobError, setDobError] = useState("");
+
+  const updateDobPart = (
+    field: "day" | "month" | "year",
+    value: string
+  ) => {
+    let newDay = dobDay;
+    let newMonth = dobMonth;
+    let newYear = dobYear;
+
+    if (field === "day") {
+      newDay = value;
+      setDobDay(value);
+    } else if (field === "month") {
+      newMonth = value;
+      setDobMonth(value);
+    } else {
+      newYear = value;
+      setDobYear(value);
+    }
+
+    const error = validateAge(newDay, newMonth, newYear);
+    setDobError(error);
+
+    if (newDay && newMonth && newYear && !error) {
+      const iso = buildIsoDate(newDay, newMonth, newYear);
+      setForm((prev) => ({ ...prev, dateOfBirth: iso }));
+    } else {
+      setForm((prev) => ({ ...prev, dateOfBirth: "" }));
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, unknown>) =>
@@ -105,8 +527,15 @@ export default function Onboarding() {
       setStep(step + 1);
     } else {
       mutation.mutate({
-        ...form,
-        age: parseInt(form.age) || 18,
+        displayName: form.displayName,
+        dateOfBirth: form.dateOfBirth,
+        gender: form.gender,
+        lookingFor: form.lookingFor,
+        crewmateColor: form.crewmateColor,
+        favoriteRole: form.favoriteRole,
+        favoriteMap: form.favoriteMap,
+        playStyle: form.playStyle,
+        bio: form.bio,
         susLevel: form.susLevel,
       });
     }
@@ -145,8 +574,10 @@ export default function Onboarding() {
                 marginBottom: 32,
               }}
             >
-              Tell us your display name and age
+              Tell us your display name and date of birth
             </Text>
+
+            {/* Display Name */}
             <Text
               style={{
                 fontFamily: "Inter_600SemiBold",
@@ -174,9 +605,22 @@ export default function Onboarding() {
                 fontFamily: "Inter_400Regular",
                 borderWidth: 1,
                 borderColor: "#1E2340",
-                marginBottom: 20,
+                marginBottom: 6,
               }}
             />
+            <Text
+              style={{
+                fontFamily: "Inter_400Regular",
+                fontSize: 12,
+                color: "#3D4460",
+                marginBottom: 28,
+                paddingHorizontal: 2,
+              }}
+            >
+              This cannot be changed later
+            </Text>
+
+            {/* Date of Birth */}
             <Text
               style={{
                 fontFamily: "Inter_600SemiBold",
@@ -184,28 +628,19 @@ export default function Onboarding() {
                 color: "#8B92A5",
                 textTransform: "uppercase",
                 letterSpacing: 1.5,
-                marginBottom: 8,
+                marginBottom: 12,
               }}
             >
-              Age
+              Date of Birth
             </Text>
-            <TextInput
-              testID="age-input"
-              value={form.age}
-              onChangeText={(v) => updateField("age", v)}
-              placeholder="18"
-              placeholderTextColor="#3D4460"
-              keyboardType="number-pad"
-              style={{
-                backgroundColor: "#151929",
-                borderRadius: 14,
-                padding: 16,
-                fontSize: 16,
-                color: "#FFFFFF",
-                fontFamily: "Inter_400Regular",
-                borderWidth: 1,
-                borderColor: "#1E2340",
-              }}
+            <DobSelector
+              day={dobDay}
+              month={dobMonth}
+              year={dobYear}
+              onDayChange={(v) => updateDobPart("day", v)}
+              onMonthChange={(v) => updateDobPart("month", v)}
+              onYearChange={(v) => updateDobPart("year", v)}
+              dobError={dobError}
             />
           </View>
         );
@@ -548,7 +983,9 @@ export default function Onboarding() {
   const canProceed = () => {
     switch (step) {
       case 0:
-        return form.displayName.trim().length > 0 && form.age.length > 0;
+        return (
+          form.displayName.trim().length > 0 && form.dateOfBirth.length > 0
+        );
       case 1:
         return form.gender.length > 0 && form.lookingFor.length > 0;
       case 2:

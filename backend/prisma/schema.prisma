@@ -69,6 +69,7 @@ model Profile {
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   displayName     String
   bio             String         @default("")
+  dateOfBirth     DateTime?
   age             Int
   gender          String
   lookingFor      String

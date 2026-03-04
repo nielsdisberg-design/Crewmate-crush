@@ -9,6 +9,14 @@ type Variables = {
 
 export const profileRoutes = new Hono<{ Variables: Variables }>();
 
+function computeAge(dateOfBirth: Date): number {
+  const today = new Date();
+  let age = today.getFullYear() - dateOfBirth.getFullYear();
+  const m = today.getMonth() - dateOfBirth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dateOfBirth.getDate())) age--;
+  return age;
+}
+
 // Get my profile
 profileRoutes.get("/me", async (c) => {
   const user = c.get("user");
@@ -18,6 +26,14 @@ profileRoutes.get("/me", async (c) => {
     where: { userId: user.id },
     include: { photos: { orderBy: { position: "asc" } } },
   });
+
+  if (profile?.dateOfBirth) {
+    const computed = computeAge(profile.dateOfBirth);
+    if (computed !== profile.age) {
+      await prisma.profile.update({ where: { id: profile.id }, data: { age: computed } });
+      return c.json({ data: { ...profile, age: computed } });
+    }
+  }
 
   return c.json({ data: profile });
 });
@@ -29,13 +45,25 @@ profileRoutes.post("/me", async (c) => {
 
   const body = await c.req.json();
 
+  // Check if profile already exists (to lock displayName after first set)
+  const existing = await prisma.profile.findUnique({ where: { userId: user.id } });
+
+  // Compute age from dateOfBirth if provided
+  let age = body.age;
+  let dateOfBirth: Date | undefined = undefined;
+  if (body.dateOfBirth) {
+    dateOfBirth = new Date(body.dateOfBirth);
+    age = computeAge(dateOfBirth);
+  }
+
   const profile = await prisma.profile.upsert({
     where: { userId: user.id },
     create: {
       userId: user.id,
       displayName: body.displayName,
       bio: body.bio || "",
-      age: body.age,
+      dateOfBirth: dateOfBirth,
+      age: age,
       gender: body.gender,
       lookingFor: body.lookingFor,
       crewmateColor: body.crewmateColor || "red",
@@ -49,9 +77,10 @@ profileRoutes.post("/me", async (c) => {
       isComplete: true,
     },
     update: {
-      displayName: body.displayName,
+      // displayName locked after first set
+      ...(existing ? {} : { displayName: body.displayName }),
       bio: body.bio,
-      age: body.age,
+      ...(dateOfBirth ? { dateOfBirth, age } : {}),
       gender: body.gender,
       lookingFor: body.lookingFor,
       crewmateColor: body.crewmateColor,
@@ -74,7 +103,6 @@ profileRoutes.get("/discover", async (c) => {
   const user = c.get("user");
   if (!user) return c.json({ error: { message: "Unauthorized", code: "UNAUTHORIZED" } }, 401);
 
-  // Get IDs already swiped on
   const swipedIds = await prisma.swipe.findMany({
     where: { swiperId: user.id },
     select: { swipedId: true },
@@ -82,10 +110,7 @@ profileRoutes.get("/discover", async (c) => {
   const excludeIds = [user.id, ...swipedIds.map((s) => s.swipedId)];
 
   const profiles = await prisma.profile.findMany({
-    where: {
-      userId: { notIn: excludeIds },
-      isComplete: true,
-    },
+    where: { userId: { notIn: excludeIds }, isComplete: true },
     include: {
       user: { select: { id: true, name: true, image: true } },
       photos: { orderBy: { position: "asc" }, take: 1 },
