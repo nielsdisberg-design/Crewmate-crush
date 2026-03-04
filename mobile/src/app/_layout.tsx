@@ -1,4 +1,4 @@
-import "../global.css";
+import "../../global.css";
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { DarkTheme, ThemeProvider } from "@react-navigation/native";
