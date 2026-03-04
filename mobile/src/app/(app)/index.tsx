@@ -449,6 +449,31 @@ function ProfileCard({ profile }: { profile: Profile }) {
           </Text>
         </View>
 
+        {profile.gameUsername ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+              marginBottom: 8,
+            }}
+          >
+            <Gamepad2 size={13} color="#8B92A5" />
+            <Text
+              style={{
+                fontFamily: "Inter_400Regular",
+                fontSize: 13,
+                color: "#8B92A5",
+              }}
+            >
+              Game username:{" "}
+              <Text style={{ fontFamily: "Inter_500Medium" }}>
+                {profile.gameUsername}
+              </Text>
+            </Text>
+          </View>
+        ) : null}
+
         {profile.bio ? (
           <Text
             style={{

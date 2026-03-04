@@ -27,6 +27,7 @@ export default function AppLayout() {
         <Tabs.Screen name="profile" options={{ href: null }} />
         <Tabs.Screen name="chat/[userId]" options={{ href: null }} />
         <Tabs.Screen name="paywall" options={{ href: null }} />
+        <Tabs.Screen name="settings" options={{ href: null }} />
       </Tabs>
     );
   }
@@ -90,6 +91,7 @@ export default function AppLayout() {
       <Tabs.Screen name="onboarding" options={{ href: null }} />
       <Tabs.Screen name="chat/[userId]" options={{ href: null }} />
       <Tabs.Screen name="paywall" options={{ href: null }} />
+      <Tabs.Screen name="settings" options={{ href: null }} />
     </Tabs>
   );
 }

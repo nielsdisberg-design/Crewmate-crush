@@ -78,6 +78,7 @@ model Profile {
   playStyle       String         @default("detective")
   susLevel        Int            @default(5)
   gamesPlayed     String         @default("100+")
+  gameUsername    String?
   photoUrl        String?
   isComplete      Boolean        @default(false)
   createdAt       DateTime       @default(now())

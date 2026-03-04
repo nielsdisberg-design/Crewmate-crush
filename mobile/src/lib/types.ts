@@ -13,6 +13,7 @@ export interface Profile {
   susLevel: number;
   gamesPlayed: string;
   photoUrl: string | null;
+  gameUsername?: string | null;
   isComplete: boolean;
   createdAt: string;
   updatedAt: string;

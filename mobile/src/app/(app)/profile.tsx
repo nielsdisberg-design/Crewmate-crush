@@ -25,6 +25,7 @@ import {
   Lock,
   X,
   Camera,
+  Settings,
 } from "lucide-react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import * as ImagePicker from "expo-image-picker";
@@ -484,6 +485,26 @@ export default function ProfileScreen() {
             <Animated.View entering={FadeIn.duration(800)}>
               <CrewmateSvg color={colorHex} size={120} />
             </Animated.View>
+            {/* Settings button — top-right corner */}
+            <Pressable
+              testID="profile-settings-button"
+              onPress={() => router.push("/(app)/settings")}
+              style={{
+                position: "absolute",
+                top: 16,
+                right: 16,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: "rgba(11,14,26,0.6)",
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.15)",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Settings size={20} color="#FFFFFF" />
+            </Pressable>
           </LinearGradient>
 
           <View style={{ paddingHorizontal: 24, marginTop: -20 }}>
@@ -544,6 +565,38 @@ export default function ProfileScreen() {
             >
               {session?.user?.email}
             </Text>
+
+            {profile?.gameUsername ? (
+              <Animated.View
+                entering={FadeIn.duration(500)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  backgroundColor: "rgba(56,254,220,0.08)",
+                  borderRadius: 12,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  marginTop: 10,
+                  borderWidth: 1,
+                  borderColor: "rgba(56,254,220,0.2)",
+                }}
+              >
+                <Gamepad2 size={13} color="#38FEDC" />
+                <Text
+                  style={{
+                    fontFamily: "Inter_500Medium",
+                    fontSize: 13,
+                    color: "#38FEDC",
+                  }}
+                >
+                  Game username:{" "}
+                  <Text style={{ fontFamily: "Inter_700Bold" }}>
+                    {profile.gameUsername}
+                  </Text>
+                </Text>
+              </Animated.View>
+            ) : null}
 
             {profile?.bio ? (
               <Text
