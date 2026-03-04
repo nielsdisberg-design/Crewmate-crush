@@ -1,13 +1,16 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  ScrollView,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -25,15 +28,46 @@ import {
   Shield,
   Gamepad2,
   Flame,
+  Crown,
+  Lock,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { api } from "@/lib/api/api";
 import { CREWMATE_COLORS, MAPS, PLAY_STYLES, ROLES } from "@/lib/types";
 import type { Profile, SwipeResult } from "@/lib/types";
 import { CrewmateSvg } from "@/components/CrewmateSvg";
+import {
+  isRevenueCatEnabled,
+  hasEntitlement,
+} from "@/lib/revenuecatClient";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = width * 0.3;
+
+const INTERESTS = [
+  "Crewmate",
+  "Impostor",
+  "Reactor",
+  "Electrical",
+  "Admin",
+  "Navigation",
+  "MedBay",
+  "Cams",
+] as const;
+
+type Interest = (typeof INTERESTS)[number];
+
+// Map interest chip labels to favoriteRole IDs
+const INTEREST_TO_ROLE: Record<Interest, string | null> = {
+  Crewmate: "crewmate",
+  Impostor: "impostor",
+  Reactor: null,
+  Electrical: null,
+  Admin: null,
+  Navigation: null,
+  MedBay: null,
+  Cams: null,
+};
 
 function ProfileCard({ profile }: { profile: Profile }) {
   const colorObj = CREWMATE_COLORS.find(
@@ -288,8 +322,20 @@ function ProfileCard({ profile }: { profile: Profile }) {
 
 export default function DiscoverScreen() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchPopup, setMatchPopup] = useState<Profile | null>(null);
+  const [activeInterest, setActiveInterest] = useState<Interest | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [rcEnabled] = useState(() => isRevenueCatEnabled());
+
+  // Check premium status on mount
+  useEffect(() => {
+    if (!rcEnabled) return;
+    hasEntitlement("premium").then((result) => {
+      if (result.ok) setIsPremium(result.data);
+    });
+  }, [rcEnabled]);
 
   const { data: profiles, isLoading } = useQuery({
     queryKey: ["discover-profiles"],
@@ -362,7 +408,31 @@ export default function DiscoverScreen() {
     ],
   }));
 
-  const currentProfile = profiles?.[currentIndex];
+  // Filter profiles by active interest (client-side)
+  const filteredProfiles = React.useMemo(() => {
+    if (!profiles) return [];
+    if (!activeInterest) return profiles;
+    const roleId = INTEREST_TO_ROLE[activeInterest];
+    if (roleId) {
+      return profiles.filter((p) => p.favoriteRole === roleId);
+    }
+    // For non-role interests, show all (they map to tasks/rooms not in profile data)
+    return profiles;
+  }, [profiles, activeInterest]);
+
+  const currentProfile = filteredProfiles[currentIndex];
+
+  const handleInterestChipPress = (interest: Interest) => {
+    if (!rcEnabled) return;
+    if (!isPremium) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push("/(app)/paywall");
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setCurrentIndex(0);
+    setActiveInterest((prev) => (prev === interest ? null : interest));
+  };
 
   if (isLoading) {
     return (
@@ -402,6 +472,75 @@ export default function DiscoverScreen() {
           </Text>
         </View>
 
+        {/* Interest Filter Bar */}
+        <View style={{ marginBottom: 8 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              paddingHorizontal: 20,
+              marginBottom: 8,
+              gap: 6,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: "Inter_500Medium",
+                fontSize: 11,
+                color: "#8B92A5",
+                textTransform: "uppercase",
+                letterSpacing: 1.2,
+              }}
+            >
+              Filter by Interest
+            </Text>
+            {rcEnabled && !isPremium ? (
+              <Crown size={13} color="#C51111" fill="#C51111" />
+            ) : null}
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+            style={{ flexGrow: 0 }}
+          >
+            {INTERESTS.map((interest) => {
+              const isActive = activeInterest === interest;
+              const isLocked = rcEnabled && !isPremium;
+              return (
+                <Pressable
+                  key={interest}
+                  testID={`interest-chip-${interest.toLowerCase()}`}
+                  onPress={() => handleInterestChipPress(interest)}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 5,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    backgroundColor: isActive ? "#38FEDC" : "#151929",
+                    borderWidth: 1.5,
+                    borderColor: isActive ? "#38FEDC" : isLocked ? "#2A1A1A" : "#1E2340",
+                    opacity: isLocked ? 0.75 : 1,
+                  }}
+                >
+                  {isLocked ? <Lock size={11} color="#C51111" /> : null}
+                  <Text
+                    style={{
+                      fontFamily: "Inter_600SemiBold",
+                      fontSize: 13,
+                      color: isActive ? "#0B0E1A" : isLocked ? "#8B92A5" : "#FFFFFF",
+                    }}
+                  >
+                    {interest}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {/* Card */}
         <View style={{ flex: 1, paddingHorizontal: 16 }}>
           {currentProfile ? (
@@ -437,10 +576,41 @@ export default function DiscoverScreen() {
                   fontSize: 14,
                   color: "#3D4460",
                   marginTop: 8,
+                  textAlign: "center",
+                  paddingHorizontal: 40,
                 }}
               >
-                Check back later for new players
+                {activeInterest
+                  ? `No crewmates match "${activeInterest}" — try a different filter`
+                  : "Check back later for new players"}
               </Text>
+              {activeInterest ? (
+                <Pressable
+                  onPress={() => {
+                    setActiveInterest(null);
+                    setCurrentIndex(0);
+                  }}
+                  style={{
+                    marginTop: 16,
+                    paddingHorizontal: 20,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: "#151929",
+                    borderWidth: 1,
+                    borderColor: "#1E2340",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: "Inter_600SemiBold",
+                      fontSize: 13,
+                      color: "#38FEDC",
+                    }}
+                  >
+                    Clear Filter
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           )}
         </View>
