@@ -85,3 +85,28 @@ export const ROLES = [
   { id: "impostor", label: "Impostor" },
   { id: "both", label: "Both" },
 ] as const;
+
+export type LikedProfile = {
+  userId: string;
+  displayName: string;
+  age: number | null;
+  crewmateColor: string;
+  photoUrl: string | null;
+  likedAt: string;
+  isRevealed: boolean;
+  isBlurred: boolean;
+};
+
+export type LikesResponse = {
+  profiles: LikedProfile[];
+  canReveal: boolean;
+  nextRevealAt: string | null;
+};
+
+export type RevealedProfile = {
+  userId: string;
+  displayName: string;
+  age: number | null;
+  crewmateColor: string;
+  photoUrl: string | null;
+};

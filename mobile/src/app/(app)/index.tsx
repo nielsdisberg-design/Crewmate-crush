@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   Pressable,
   Image,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,6 +32,7 @@ import {
   Flame,
   Crown,
   Lock,
+  Zap,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { api } from "@/lib/api/api";
@@ -69,6 +71,283 @@ const INTEREST_TO_ROLE: Record<Interest, string | null> = {
   MedBay: null,
   Cams: null,
 };
+
+type SwipeStatus = {
+  likesUsed: number;
+  likesRemaining: number;
+  limit: number;
+  resetsAt: string | null;
+};
+
+function useCountdown(resetsAt: string | null): string | null {
+  const [countdown, setCountdown] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!resetsAt) {
+      setCountdown(null);
+      return;
+    }
+
+    const update = () => {
+      const ms = new Date(resetsAt).getTime() - Date.now();
+      if (ms <= 0) {
+        setCountdown("0m");
+        return;
+      }
+      const totalMin = Math.floor(ms / 60000);
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      setCountdown(h > 0 ? `${h}h ${m}m` : `${m}m`);
+    };
+
+    update();
+    const interval = setInterval(update, 30000);
+    return () => clearInterval(interval);
+  }, [resetsAt]);
+
+  return countdown;
+}
+
+function LikeCounterBar({
+  swipeStatus,
+  onGoUnlimited,
+}: {
+  swipeStatus: SwipeStatus | undefined;
+  onGoUnlimited: () => void;
+}) {
+  const countdown = useCountdown(swipeStatus?.resetsAt ?? null);
+  const isExhausted = swipeStatus ? swipeStatus.likesRemaining === 0 : false;
+  const used = swipeStatus?.likesUsed ?? 0;
+  const limit = swipeStatus?.limit ?? 10;
+  const progress = limit > 0 ? Math.min(used / limit, 1) : 0;
+
+  return (
+    <View
+      style={{
+        marginHorizontal: 20,
+        marginBottom: 10,
+        backgroundColor: "#151929",
+        borderRadius: 14,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: isExhausted ? "#C51111" : "#1E2340",
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 8,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Heart
+            size={14}
+            color={isExhausted ? "#555" : "#C51111"}
+            fill={isExhausted ? "#555" : "#C51111"}
+          />
+          {isExhausted && countdown ? (
+            <Text
+              style={{
+                fontFamily: "Inter_500Medium",
+                fontSize: 13,
+                color: "#8B92A5",
+              }}
+            >
+              Resets in{" "}
+              <Text style={{ color: "#38FEDC" }}>{countdown}</Text>
+            </Text>
+          ) : (
+            <Text
+              style={{
+                fontFamily: "Inter_500Medium",
+                fontSize: 13,
+                color: "#FFFFFF",
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: "Inter_700Bold",
+                  color: isExhausted ? "#555" : "#C51111",
+                }}
+              >
+                {used}
+              </Text>
+              <Text style={{ color: "#8B92A5" }}> / {limit} likes today</Text>
+            </Text>
+          )}
+        </View>
+        <Pressable onPress={onGoUnlimited} testID="go-unlimited-button">
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 12,
+              color: "#38FEDC",
+            }}
+          >
+            Go Unlimited →
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Progress bar */}
+      <View
+        style={{
+          height: 4,
+          backgroundColor: "#0F1225",
+          borderRadius: 2,
+          overflow: "hidden",
+        }}
+      >
+        <View
+          style={{
+            height: 4,
+            width: `${progress * 100}%`,
+            backgroundColor: isExhausted ? "#555" : "#C51111",
+            borderRadius: 2,
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+
+function LimitReachedModal({
+  visible,
+  resetsAt,
+  onClose,
+  onUpgrade,
+}: {
+  visible: boolean;
+  resetsAt: string | null;
+  onClose: () => void;
+  onUpgrade: () => void;
+}) {
+  const countdown = useCountdown(resetsAt);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.8)",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 32,
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: "#151929",
+            borderRadius: 24,
+            padding: 28,
+            width: "100%",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: "#C51111",
+          }}
+        >
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: "rgba(197,17,17,0.15)",
+              justifyContent: "center",
+              alignItems: "center",
+              marginBottom: 16,
+            }}
+          >
+            <Heart size={28} color="#C51111" fill="#C51111" />
+          </View>
+          <Text
+            style={{
+              fontFamily: "Orbitron_700Bold",
+              fontSize: 18,
+              color: "#FFFFFF",
+              textAlign: "center",
+              marginBottom: 8,
+            }}
+          >
+            Like Limit Reached
+          </Text>
+          <Text
+            style={{
+              fontFamily: "Inter_400Regular",
+              fontSize: 14,
+              color: "#8B92A5",
+              textAlign: "center",
+              marginBottom: 8,
+              lineHeight: 20,
+            }}
+          >
+            You've used all 10 likes for today.
+          </Text>
+          {countdown ? (
+            <Text
+              style={{
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 14,
+                color: "#38FEDC",
+                textAlign: "center",
+                marginBottom: 24,
+              }}
+            >
+              Resets in {countdown}
+            </Text>
+          ) : (
+            <View style={{ marginBottom: 24 }} />
+          )}
+          <Pressable
+            onPress={onUpgrade}
+            testID="limit-upgrade-button"
+            style={{ width: "100%", marginBottom: 12 }}
+          >
+            <LinearGradient
+              colors={["#C51111", "#8B0000"]}
+              style={{
+                borderRadius: 14,
+                paddingVertical: 16,
+                alignItems: "center",
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Crown size={16} color="#FFFFFF" fill="#FFFFFF" />
+                <Text
+                  style={{
+                    fontFamily: "Inter_700Bold",
+                    fontSize: 15,
+                    color: "#FFFFFF",
+                  }}
+                >
+                  Upgrade to Premium
+                </Text>
+              </View>
+            </LinearGradient>
+          </Pressable>
+          <Pressable onPress={onClose} testID="limit-close-button">
+            <Text
+              style={{
+                fontFamily: "Inter_500Medium",
+                fontSize: 14,
+                color: "#3D4460",
+                paddingVertical: 8,
+              }}
+            >
+              Wait for reset
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 function ProfileCard({ profile }: { profile: Profile }) {
   const colorObj = CREWMATE_COLORS.find(
@@ -367,6 +646,7 @@ export default function DiscoverScreen() {
   const [activeInterest, setActiveInterest] = useState<Interest | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [rcEnabled] = useState(() => isRevenueCatEnabled());
+  const [limitModalVisible, setLimitModalVisible] = useState(false);
 
   // Check premium status on mount
   useEffect(() => {
@@ -381,19 +661,38 @@ export default function DiscoverScreen() {
     queryFn: () => api.get<Profile[]>("/api/profiles/discover"),
   });
 
+  // Fetch swipe status only for non-premium users
+  const { data: swipeStatus } = useQuery({
+    queryKey: ["swipe-status"],
+    queryFn: () =>
+      api.get<SwipeStatus>("/api/swipes/status"),
+    enabled: !isPremium,
+  });
+
   const { mutate: swipeMutate } = useMutation({
     mutationFn: ({
       swipedId,
       direction,
+      isPremium: premium,
     }: {
       swipedId: string;
       direction: string;
-    }) => api.post<SwipeResult>("/api/swipes", { swipedId, direction }),
+      isPremium: boolean;
+    }) =>
+      api.post<SwipeResult>("/api/swipes", { swipedId, direction, isPremium: premium }),
     onSuccess: (data) => {
       if (data?.isMatch && profiles) {
         const matchedProfile = profiles[currentIndex];
         setMatchPopup(matchedProfile);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      queryClient.invalidateQueries({ queryKey: ["swipe-status"] });
+    },
+    onError: (error: any) => {
+      // Handle 429 limit reached
+      if (error?.status === 429 || error?.message?.includes("429")) {
+        setLimitModalVisible(true);
+        queryClient.invalidateQueries({ queryKey: ["swipe-status"] });
       }
     },
   });
@@ -407,16 +706,27 @@ export default function DiscoverScreen() {
       if (!profiles || currentIndex >= profiles.length) return;
       const profile = profiles[currentIndex];
 
+      // Block right swipe when limit is reached for non-premium users
+      if (direction === "right" && !isPremium && swipeStatus?.likesRemaining === 0) {
+        setLimitModalVisible(true);
+        // Reset card position
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+        rotation.value = withSpring(0);
+        return;
+      }
+
       swipeMutate({
         swipedId: profile.userId,
         direction,
+        isPremium,
       });
       setCurrentIndex((prev) => prev + 1);
       translateX.value = 0;
       translateY.value = 0;
       rotation.value = 0;
     },
-    [profiles, currentIndex, swipeMutate, translateX, translateY, rotation]
+    [profiles, currentIndex, swipeMutate, isPremium, swipeStatus, translateX, translateY, rotation]
   );
 
   const gesture = Gesture.Pan()
@@ -460,6 +770,8 @@ export default function DiscoverScreen() {
   }, [profiles, activeInterest]);
 
   const currentProfile = filteredProfiles[currentIndex];
+
+  const isLimitReached = !isPremium && swipeStatus?.likesRemaining === 0;
 
   const handleInterestChipPress = (interest: Interest) => {
     if (!rcEnabled) return;
@@ -510,6 +822,14 @@ export default function DiscoverScreen() {
             Discover
           </Text>
         </View>
+
+        {/* Like Counter Bar — only for non-premium when RC is enabled */}
+        {!isPremium && rcEnabled ? (
+          <LikeCounterBar
+            swipeStatus={swipeStatus}
+            onGoUnlimited={() => router.push("/(app)/paywall")}
+          />
+        ) : null}
 
         {/* Interest Filter Bar */}
         <View style={{ marginBottom: 8 }}>
@@ -689,6 +1009,10 @@ export default function DiscoverScreen() {
             <TouchableOpacity
               testID="like-button"
               onPress={() => {
+                if (isLimitReached) {
+                  setLimitModalVisible(true);
+                  return;
+                }
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 translateX.value = withTiming(width * 1.5, {
                   duration: 300,
@@ -701,10 +1025,11 @@ export default function DiscoverScreen() {
                 borderRadius: 32,
                 justifyContent: "center",
                 alignItems: "center",
+                opacity: isLimitReached ? 0.4 : 1,
               }}
             >
               <LinearGradient
-                colors={["#C51111", "#8B0000"]}
+                colors={isLimitReached ? ["#333", "#222"] : ["#C51111", "#8B0000"]}
                 style={{
                   width: 64,
                   height: 64,
@@ -806,6 +1131,17 @@ export default function DiscoverScreen() {
           </TouchableOpacity>
         </Animated.View>
       ) : null}
+
+      {/* Limit Reached Modal */}
+      <LimitReachedModal
+        visible={limitModalVisible}
+        resetsAt={swipeStatus?.resetsAt ?? null}
+        onClose={() => setLimitModalVisible(false)}
+        onUpgrade={() => {
+          setLimitModalVisible(false);
+          router.push("/(app)/paywall");
+        }}
+      />
     </View>
   );
 }

@@ -1,6 +1,6 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { Rocket, Heart, User } from "lucide-react-native";
+import { Rocket, Heart, User, Sparkles } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/api";
 import type { Profile } from "@/lib/types";
@@ -22,6 +22,7 @@ export default function AppLayout() {
       >
         <Tabs.Screen name="onboarding" options={{ href: "/onboarding" as any }} />
         <Tabs.Screen name="index" options={{ href: null }} />
+        <Tabs.Screen name="likes" options={{ href: null }} />
         <Tabs.Screen name="matches" options={{ href: null }} />
         <Tabs.Screen name="profile" options={{ href: null }} />
         <Tabs.Screen name="chat/[userId]" options={{ href: null }} />
@@ -60,11 +61,20 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="likes"
+        options={{
+          title: "Likes",
+          tabBarIcon: ({ color, size }) => (
+            <Heart size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="matches"
         options={{
           title: "Matches",
           tabBarIcon: ({ color, size }) => (
-            <Heart size={size} color={color} />
+            <Sparkles size={size} color={color} />
           ),
         }}
       />

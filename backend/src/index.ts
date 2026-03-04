@@ -8,6 +8,7 @@ import { profileRoutes } from "./routes/profiles";
 import { swipeRoutes } from "./routes/swipes";
 import { matchRoutes } from "./routes/matches";
 import { messageRoutes } from "./routes/messages";
+import { likesRoutes } from "./routes/likes";
 
 const app = new Hono<{
   Variables: {
@@ -88,6 +89,7 @@ app.route("/api/profiles", profileRoutes);
 app.route("/api/swipes", swipeRoutes);
 app.route("/api/matches", matchRoutes);
 app.route("/api/messages", messageRoutes);
+app.route("/api/likes", likesRoutes);
 
 export default {
   port: parseInt(env.PORT || "3000"),
